@@ -7,11 +7,12 @@ let defaultConfig = {
     successClass: 'has-success',
     errorTextParent: 'form-group',
     errorTextTag: 'div',
-    errorTextClass: 'text-help'
+    errorTextClass: 'text-help',
+    selector: 'input:not([type^=hidden]):not([type^=submit]), select, textarea',
 };
 
 const PRISTINE_ERROR = 'pristine-error';
-const SELECTOR = "input:not([type^=hidden]):not([type^=submit]), select, textarea";
+// const SELECTOR = "input:not([type^=hidden]):not([type^=submit]), select, textarea";
 const ALLOWED_ATTRIBUTES = ["required", "min", "max", 'minlength', 'maxlength', 'pattern'];
 const EMAIL_REGEX = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
 
@@ -51,7 +52,7 @@ export default function Pristine(form, config, live){
         self.form = form;
         self.config = mergeConfig(config || {}, defaultConfig);
         self.live = !(live === false);
-        self.fields = Array.from(form.querySelectorAll(SELECTOR)).map(function (input) {
+        self.fields = Array.from(form.querySelectorAll(self.config.selector)).map(function (input) {
 
             let fns = [];
             let params = {};
@@ -245,11 +246,19 @@ export default function Pristine(form, config, live){
         let errorElements = _getErrorElements(field);
         let errorClassElement = errorElements[0], errorTextElement = errorElements[1];
 
+        const { input } = field;
+        const inputId = input.id || Math.floor(new Date().valueOf() * Math.random());
+        const errorId = `error-${inputId}`;
+
         if(errorClassElement){
             errorClassElement.classList.remove(self.config.successClass);
             errorClassElement.classList.add(self.config.errorClass);
+            input.setAttribute('aria-describedby', errorId);
+            input.setAttribute('aria-invalid', 'true');
         }
         if (errorTextElement){
+            errorTextElement.setAttribute('id', errorId);
+            errorTextElement.setAttribute('role', 'alert');
             errorTextElement.innerHTML = field.errors.join('<br/>');
             errorTextElement.style.display = errorTextElement.pristineDisplay || '';
         }
@@ -269,12 +278,18 @@ export default function Pristine(form, config, live){
     function _removeError(field){
         let errorElements = _getErrorElements(field);
         let errorClassElement = errorElements[0], errorTextElement = errorElements[1];
+        const { input } = field
+
         if (errorClassElement){
             // IE > 9 doesn't support multiple class removal
             errorClassElement.classList.remove(self.config.errorClass);
             errorClassElement.classList.remove(self.config.successClass);
+            input.removeAttribute('aria-describedby');
+            input.removeAttribute('aria-invalid');
         }
         if (errorTextElement){
+            errorTextElement.removeAttribute('id');
+            errorTextElement.removeAttribute('role');
             errorTextElement.innerHTML = '';
             errorTextElement.style.display = 'none';
         }
